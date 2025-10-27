@@ -1,146 +1,83 @@
-import React, { useState } from "react";
-import Navbar from "../Components/Navbar";
-import Category from "../Components/Category";
-import { Box, Button, Dialog, TextField, Typography } from "@mui/material";
+import React from "react";
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Box,
+  InputBase,
+  styled,
+} from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
 import useDashboardStore from "../store/store.js";
 
-const Dashboard = () => {
-  const { data, addWidget } = useDashboardStore();
-  const searchTerm = useDashboardStore((state) => state.searchTerm);
+// Styled search container
+const Search = styled("div")(({ theme }) => ({
+  position: "relative",
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: "rgba(255, 255, 255, 0.15)",
+  "&:hover": {
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+  },
+  marginLeft: 0,
+  width: "100%",
+  [theme.breakpoints.up("sm")]: {
+    marginLeft: theme.spacing(1),
+    width: "auto",
+  },
+}));
 
-  const [open, setOpen] = useState(false);
-  const [widgetName, setWidgetName] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [factors, setFactors] = useState([{ label: "", value: "" }]);
+const SearchIconWrapper = styled("div")(({ theme }) => ({
+  padding: theme.spacing(0, 2),
+  height: "100%",
+  position: "absolute",
+  pointerEvents: "none",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+}));
 
-  const addNewFactor = () => setFactors([...factors, { label: "", value: "" }]);
-  const removeFactor = (idx) => setFactors(factors.filter((_, i) => i !== idx));
-  const updateFactor = (idx, key, value) => {
-    const newFactors = [...factors];
-    newFactors[idx][key] = key === "value" ? Number(value) : value;
-    setFactors(newFactors);
-  };
+const StyledInputBase = styled(InputBase)(({ theme }) => ({
+  color: "inherit",
+  width: "100%",
+  "& .MuiInputBase-input": {
+    padding: theme.spacing(1, 1, 1, 0),
+    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
+    transition: theme.transitions.create("width"),
+    [theme.breakpoints.up("sm")]: {
+      width: "20ch",
+      "&:focus": {
+        width: "30ch",
+      },
+    },
+  },
+}));
 
-  // Filtering categories and widgets based on searchTerm
-  const filteredCategories = data.categories
-    .map((cat) => {
-      // Filter widgets that match search term
-      const filteredWidgets = cat.widgets.filter((widget) =>
-        widget.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-
-      // If category name matches or it has matching widgets, show it
-      if (
-        cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        filteredWidgets.length > 0
-      ) {
-        return { ...cat, widgets: filteredWidgets };
-      }
-      return null; // exclude category if no match
-    })
-    .filter(Boolean);
-
-  const handleAddWidget = () => {
-    if (!selectedCategory) return alert("Select a category!");
-    if (!widgetName) return alert("Enter widget name!");
-    if (factors.some((f) => !f.label || f.value === "")) return alert("Fill all factor fields!");
-
-    const widget = {
-      id: `w_${Date.now()}`,
-      name: widgetName,
-      type: "pie",
-      data: factors.map((f) => ({ label: f.label, value: f.value })),
-    };
-
-    addWidget(selectedCategory, widget);
-
-    setWidgetName("");
-    setFactors([{ label: "", value: "" }]);
-    setSelectedCategory("");
-    setOpen(false);
-  };
+const Navbar = () => {
+  const { searchTerm, setSearchTerm } = useDashboardStore();
 
   return (
-    <Box sx={{ p: 3, bgcolor: "#F7F8FA", minHeight: "100vh" }}>
-      <Navbar />
-
-      {filteredCategories.length === 0 && (
-        <Typography variant="body1" sx={{ mt: 4, color: "gray", textAlign: "center" }}>
-          No matching categories or widgets found.
+    <AppBar position="static" sx={{ mb: 3, borderRadius: 2 }}>
+      <Toolbar>
+        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          Dashboard / V2
         </Typography>
-      )}
 
-      {filteredCategories.map((cat) => (
-        <Category key={cat.id} category={cat} />
-      ))}
+        <Box sx={{ flexGrow: 1 }} />
 
-      <Button
-        variant="contained"
-        sx={{ mt: 3, borderRadius: 3 }}
-        onClick={() => setOpen(true)}
-      >
-        + Add Widget
-      </Button>
-
-      <Dialog open={open} onClose={() => setOpen(false)}>
-        <Box
-          p={3}
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-            minWidth: 400,
-            bgcolor: "#fff",
-          }}
-        >
-          <Typography variant="h6" sx={{ mb: 1 }}>
-            Add Pie Chart Widget
-          </Typography>
-
-          <TextField
-            label="Widget Name"
-            value={widgetName}
-            onChange={(e) => setWidgetName(e.target.value)}
+        <Search>
+          <SearchIconWrapper>
+            <SearchIcon />
+          </SearchIconWrapper>
+          <StyledInputBase
+            placeholder="Search widgets…"
+            inputProps={{ "aria-label": "search" }}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <TextField
-            label="Category ID"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            placeholder="e.g., cat_1"
-          />
-
-          <Typography sx={{ mt: 2 }}>Factors & Values</Typography>
-          {factors.map((f, idx) => (
-            <Box key={idx} sx={{ display: "flex", gap: 1 }}>
-              <TextField
-                label="Factor"
-                value={f.label}
-                onChange={(e) => updateFactor(idx, "label", e.target.value)}
-                fullWidth
-              />
-              <TextField
-                label="Value"
-                type="number"
-                value={f.value}
-                onChange={(e) => updateFactor(idx, "value", e.target.value)}
-                sx={{ width: "100px" }}
-              />
-              <Button color="error" onClick={() => removeFactor(idx)}>
-                X
-              </Button>
-            </Box>
-          ))}
-
-          <Button variant="outlined" onClick={addNewFactor}>
-            + Add Factor
-          </Button>
-          <Button variant="contained" onClick={handleAddWidget}>
-            Add Widget
-          </Button>
-        </Box>
-      </Dialog>
-    </Box>
+        </Search>
+      </Toolbar>
+    </AppBar>
   );
 };
 
-export default Dashboard;
+export default Navbar;
